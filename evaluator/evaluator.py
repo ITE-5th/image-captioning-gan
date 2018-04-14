@@ -22,7 +22,7 @@ class Evaluator(nn.Module):
         self.linear = nn.Linear(1, 1)
 
     def init_hidden(self):
-        return Variable(torch.randn(1, 1, 3)), Variable(torch.randn((1, 1, 3)))
+        return Variable(torch.randn(1, 1, 4096)), Variable(torch.randn((1, 1, 4096)))
 
     def forward(self, image_features, embeddings):
         hidden = self.init_hidden()
@@ -43,7 +43,7 @@ if __name__ == '__main__':
     evaluator = Evaluator(corpus).cuda()
     dataset = CocoDataset(corpus, extractor)
     batch_size = 64
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=cpu_count() // 2)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=cpu_count())
     criterion = nn.CrossEntropyLoss().cuda()
     optimizer = optim.Adam(evaluator.parameters(), lr=0.0001, weight_decay=1e-5)
     epochs = 5
