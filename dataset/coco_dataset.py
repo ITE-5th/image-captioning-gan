@@ -6,8 +6,8 @@ from torchvision import transforms
 
 from dataset.corpus import Corpus
 from extractor.base_extractor import BaseExtractor
+from extractor.vgg_extractor import VggExtractor
 from file_path_manager import FilePathManager
-from vgg_extractor import VggExtractor
 
 
 class CocoDataset(Dataset):
