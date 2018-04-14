@@ -108,6 +108,9 @@ class Corpus:
             result[i] = self.word_one_hot(tokens[i]) if one_hot else self.word_embedding(tokens[i])
         return result
 
+    def __call__(self, sentence, one_hot: bool = False):
+        return self.embed_sentence(sentence, one_hot)
+
     def store(self, file_path):
         with open(file_path, "wb") as f:
             pickle.dump((self.word2idx, self.idx2word), f)

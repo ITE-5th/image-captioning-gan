@@ -13,7 +13,7 @@ from file_path_manager import FilePathManager
 
 class VggExtractor(BaseExtractor):
 
-    def __init__(self, use_gpu: bool = True):
+    def __init__(self, use_gpu: bool = True, pretrained: bool = True):
         super().__init__(use_gpu)
         mean = [0.5, 0.5, 0.5]
         std = [0.5, 0.5, 0.5]
@@ -28,7 +28,7 @@ class VggExtractor(BaseExtractor):
                 transforms.Normalize(mean, std)
             ])
         self.use_gpu = use_gpu
-        self.cnn = vgg16(pretrained=True)
+        self.cnn = vgg16(pretrained=pretrained)
         self.cnn.classifier = nn.Sequential(*(self.cnn.classifier[i] for i in range(6)))
         if use_gpu:
             self.cnn = self.cnn.cuda()

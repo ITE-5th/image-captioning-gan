@@ -12,10 +12,9 @@ from file_path_manager import FilePathManager
 
 class CocoDataset(Dataset):
 
-    def __init__(self, corpus: Corpus, extractor: BaseExtractor, evaluator: bool = True):
+    def __init__(self, corpus: Corpus, evaluator: bool = True):
         self.corpus = corpus
         self.evaluator = evaluator
-        self.extractor = extractor
         self.captions = dset.CocoCaptions(root=FilePathManager.resolve(f'data/train'),
                                           annFile=FilePathManager.resolve(
                                               f"data/annotations/captions_train2017.json"),
@@ -37,12 +36,12 @@ class CocoDataset(Dataset):
 
 
 if __name__ == '__main__':
-    extractor = VggExtractor(use_gpu=True)
     captions = dset.CocoCaptions(root=FilePathManager.resolve(f'data/train'),
                                  annFile=FilePathManager.resolve(
                                      f"data/annotations/captions_train2017.json"),
                                  transform=transforms.ToTensor())
     print(f"number of images = {len(captions.coco.imgs)}")
+    extractor = VggExtractor(use_gpu=True, pretrained=False)
     images = []
     i = 1
     for image, _ in captions:
