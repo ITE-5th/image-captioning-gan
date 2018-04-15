@@ -33,22 +33,30 @@ class ConditionalGenerator(nn.Module):
 
         self.max_sentence_length = max_sentence_length
         self.embed = corpus
-        self.dist = Normal(Variable(mean), Variable(std))  # noise variable
+        self.dist = Normal(Variable(torch.FloatTensor([mean])), Variable(torch.FloatTensor([std])))  # noise variable
         self.lstm = nn.LSTM(input_size=corpus.embed_size,
                             hidden_size=self.input_encoding_size,
                             num_layers=num_layers,
                             batch_first=True,
                             dropout=dropout)
 
-        self.output_linear = nn.Linear(self.input_encoding_size, corpus.vocab_size)
+        self.output_linear = nn.Linear(self.input_encoding_size, corpus.vocab_size)  # todo: corpus.vocab_size + 1?
         self.features_linear = nn.Sequential(
             nn.Linear(cnn_output_size + len(mean), input_encoding_size),
             nn.ReLU()
         )
 
     def init_hidden(self, image_features):
-        return self.features_linear(torch.cat((image_features, self.dist.sample()), 1)), \
-               Variable(torch.zeros(1, 1, self.input_encoding_size))
+
+        # generate noise
+        noise = self.dist.sample(image_features.size()).squeeze()
+
+        # hidden of shape (num_layers * num_directions, batch, hidden_size)
+        hidden = self.features_linear(torch.cat((image_features, noise), 1)).unsqueeze(0)
+        
+        # cell of shape (num_layers * num_directions, batch, hidden_size)
+        cell = Variable(torch.zeros(1, image_features.shape[0], self.input_encoding_size))
+        return hidden, cell
 
     def forward(self, features, captions):
         embeddings = self.embed(captions)
