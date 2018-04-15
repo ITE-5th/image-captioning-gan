@@ -111,10 +111,9 @@ class ConditionalGenerator(nn.Module):
 if __name__ == '__main__':
     if not os.path.exists(FilePathManager.resolve("models")):
         os.makedirs(FilePathManager.resolve("models"))
-    extractor = VggExtractor(use_gpu=True, pretrained=False)
     corpus = Corpus.load(FilePathManager.resolve("data/corpus.pkl"))
     print("Corpus loaded")
-    dataset = CocoDataset(corpus, extractor, evaluator=False)
+    dataset = CocoDataset(corpus, evaluator=False)
     batch_size = 2
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=cpu_count())
     generator = ConditionalGenerator(corpus).cuda()
@@ -126,9 +125,14 @@ if __name__ == '__main__':
         for i, (images, captions) in enumerate(dataloader, 0):
             print(f"Batch = {i + 1}")
             images, captions = Variable(images).cuda(), Variable(captions).cuda()
+
+            inputs = captions[:, :-1]
+            targets = captions[:, 1:]
+
             optimizer.zero_grad()
-            outputs = generator.forward(images, logits=True)
-            loss = criterion(outputs, captions)
+            outputs = generator.forward(images, inputs)
+
+            loss = criterion(outputs, targets)
             loss.backward()
             optimizer.step()
             torch.save({"state_dict": generator.state_dict()}, FilePathManager.resolve("models/generator.pth"))
