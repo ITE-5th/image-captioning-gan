@@ -33,7 +33,7 @@ class ConditionalGenerator(nn.Module):
 
         self.max_sentence_length = max_sentence_length
         self.embed = corpus
-        self.dist = Normal(Variable(torch.FloatTensor([mean])), Variable(torch.FloatTensor([std])))  # noise variable
+        self.dist = Normal(Variable(mean), Variable(std))  # noise variable
         self.lstm = nn.LSTM(input_size=corpus.embed_size,
                             hidden_size=self.input_encoding_size,
                             num_layers=num_layers,
@@ -49,7 +49,7 @@ class ConditionalGenerator(nn.Module):
     def init_hidden(self, image_features):
 
         # generate noise
-        noise = self.dist.sample(image_features.size()).squeeze()
+        noise = self.dist.sample().unsqueeze(0)
 
         # hidden of shape (num_layers * num_directions, batch, hidden_size)
         hidden = self.features_linear(torch.cat((image_features, noise), 1).unsqueeze(0))
