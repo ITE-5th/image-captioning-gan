@@ -40,7 +40,7 @@ class ConditionalGenerator(nn.Module):
                             batch_first=True,
                             dropout=dropout)
 
-        self.output_linear = nn.Linear(self.input_encoding_size, corpus.vocab_size)  # todo: corpus.vocab_size + 1?
+        self.output_linear = nn.Linear(self.input_encoding_size, corpus.vocab_size)
         self.features_linear = nn.Sequential(
             nn.Linear(cnn_output_size + len(mean), input_encoding_size),
             nn.ReLU()
@@ -52,8 +52,8 @@ class ConditionalGenerator(nn.Module):
         noise = self.dist.sample(image_features.size()).squeeze()
 
         # hidden of shape (num_layers * num_directions, batch, hidden_size)
-        hidden = self.features_linear(torch.cat((image_features, noise), 1)).unsqueeze(0)
-        
+        hidden = self.features_linear(torch.cat((image_features, noise), 1).unsqueeze(0))
+
         # cell of shape (num_layers * num_directions, batch, hidden_size)
         cell = Variable(torch.zeros(1, image_features.shape[0], self.input_encoding_size))
         return hidden, cell
