@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 
-cd ~; git clone https://github.com/cocodataset/cocoapi.git; cd ~/cocoapi/PythonAPI; make install
-cd ~; git clone https://github.com/dmarnerides/pydlt.git; ~/pydlt; pip install . --extra-index-url --trusted-host --upgrade
-pip install --no-cache-dir -I pillow
+#cd ~; git clone https://github.com/cocodataset/cocoapi.git; cd ~/cocoapi/PythonAPI; make install
+#cd ~; git clone https://github.com/dmarnerides/pydlt.git; ~/pydlt; pip install . --extra-index-url --trusted-host --upgrade
+
+#pip install --no-cache-dir -I pillow
+
+#cd $HOME/image-captioning-gan/scripts
 
 mkdir -p ../data ../data/annotations
 # download fasttext and convert to gensim

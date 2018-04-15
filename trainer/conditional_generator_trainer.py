@@ -35,9 +35,12 @@ for epoch in range(epochs):
     for i, (images, captions) in enumerate(dataloader, 0):
         print(f"Batch = {i + 1}")
         images, captions = Variable(images).cuda(), Variable(captions).cuda()
+        inputs = captions[:, :-1]
+        targets = captions[:, 1:]
+
         optimizer.zero_grad()
-        outputs = generator.forward(images, captions)
-        loss = criterion(outputs, captions)
+        outputs = generator.forward(images, inputs)
+        loss = criterion(outputs, targets)
         loss.backward()
         optimizer.step()
         torch.save({"state_dict": generator.state_dict()}, FilePathManager.resolve("models/generator.pth"))
