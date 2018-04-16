@@ -1,4 +1,5 @@
 import pickle
+import random
 
 import torchvision.datasets as dset
 from torch.utils.data import Dataset
@@ -21,14 +22,19 @@ class CocoDataset(Dataset):
         with open(FilePathManager.resolve("data/embedded_images.pkl"), "rb") as f:
             self.images = pickle.load(f)
         self.length = len(self.images) * 5
-        print("loading finished")
 
     def __getitem__(self, index):
-        image = self.images[index // 5]
-        item = self.captions[index // 5]
+        temp = index // 5
+        image = self.images[temp]
+        item = self.captions[temp]
         caption = item[1][index % 5]
         caption = self.corpus.embed_sentence(caption, one_hot=not self.evaluator)
-        return image, caption
+        other_index = random.choice([k for k in range(self.length // 5) if k != temp])
+        other_caption = self.captions[other_index]
+        other_index = random.choice(range(4))
+        other_caption = other_caption[1][other_index]
+        other_caption = self.corpus.embed_sentence(other_caption, one_hot=not self.evaluator)
+        return image, caption, other_caption
 
     def __len__(self):
         return self.length
@@ -40,7 +46,7 @@ if __name__ == '__main__':
                                      f"data/annotations/captions_train2017.json"),
                                  transform=transforms.ToTensor())
     print(f"number of images = {len(captions.coco.imgs)}")
-    extractor = VggExtractor(use_gpu=True, pretrained=True)
+    extractor = VggExtractor(use_gpu=True)
     images = []
     i = 1
     for image, _ in captions:
@@ -50,22 +56,3 @@ if __name__ == '__main__':
         i += 1
     with open(FilePathManager.resolve("data/embedded_images.pkl"), "wb") as f:
         pickle.dump(images, f)
-    # corpus = Corpus.load(FilePathManager.resolve("data/corpus.pkl"))
-    # one_hot = []
-    # i = 1
-    # for _, capts in captions:
-    #     print(f"caption = {i}")
-    #     for capt in capts:
-    #         one_hot.append(corpus.embed_sentence(capt, one_hot=True))
-    #     i += 1
-    # with open(FilePathManager.resolve("data/one_hot_sentences.pkl"), "wb") as f:
-    #     pickle.dump(one_hot, f)
-    # i = 1
-    # embedded_sentences = []
-    # for _, capts in captions:
-    #     print(f"caption = {i}")
-    #     for capt in capts:
-    #         embedded_sentences.append(corpus.embed_sentence(capt, one_hot=False))
-    #     i += 1
-    # with open(FilePathManager.resolve("data/embedded_sentences.pkl"), "wb") as f:
-    #     pickle.dump(embedded_sentences, f)

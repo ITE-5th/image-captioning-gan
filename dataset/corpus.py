@@ -21,7 +21,7 @@ class Corpus:
         self.fast_text = word_embeddings if word_embeddings is not None else {}
         self.vocab_size = len(self.word2idx)
         self.embed_size = 300
-        self.max_sentence_length = 16
+        self.max_sentence_length = 18
         self.min_word_freq = 5
 
     def word_embedding(self, word):
@@ -32,6 +32,20 @@ class Corpus:
         result = torch.from_numpy(self.fast_text[word]).view(-1)
         return result
 
+    def word_embeddings(self, words):
+        temp = len(words)
+        result = torch.zeros(temp, self.embed_size)
+        for i in range(temp):
+            result[i] = self.word_embedding(words[i])
+        return result
+
+    def word_embedding_from_index(self, index):
+        return self.word_embedding(self.word_from_index(index))
+
+    def word_embeddings_from_indices(self, indices):
+        words = [self.word_from_index(i) for i in indices]
+        return self.word_embeddings(words)
+
     def word_one_hot(self, word):
         if word not in self.word2idx and word not in self.idx2word:
             word = self.UNK
@@ -39,9 +53,11 @@ class Corpus:
         if isinstance(word, str):
             word = self.word_index(word)
         result[word] = 1
-        return result
+        return result.long()
 
     def word_index(self, word):
+        if word not in self.word2idx and word not in self.idx2word:
+            word = self.UNK
         return self.word2idx[word]
 
     def word_from_index(self, index):
@@ -110,6 +126,12 @@ class Corpus:
         for i in range(self.max_sentence_length):
             result[i] = self.word_one_hot(tokens[i]) if one_hot else self.word_embedding(tokens[i])
         return result
+
+    def sentence_indices(self, sentence):
+        sentence = f"{self.START_SYMBOL} {sentence} {self.END_SYMBOL}"
+        tokens = self.tokenize(sentence)
+        tokens = self.pad_sentence(tokens)
+        return torch.LongTensor([self.word_index(token) for token in tokens])
 
     def __call__(self, sentence, one_hot: bool = False):
         return self.embed_sentence(sentence, one_hot)
