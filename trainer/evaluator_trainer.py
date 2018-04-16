@@ -28,6 +28,7 @@ if __name__ == '__main__':
     print("Begin Training")
     for epoch in range(epochs):
         for i, (images, captions, other_captions) in enumerate(dataloader, 0):
+            print(f"Batch = {i + 1}")
             images, captions, other_captions = Variable(images).cuda(), Variable(captions).cuda(), Variable(
                 other_captions).cuda()
             captions = pack_padded_sequence(captions, [18] * len(images), True)
@@ -40,4 +41,5 @@ if __name__ == '__main__':
             loss = criterion(evaluator_outputs, generator_outputs, other_outputs)
             loss.backward()
             optimizer.step()
+        print(f"Epoch = {epoch + 1}")
         evaluator.save()

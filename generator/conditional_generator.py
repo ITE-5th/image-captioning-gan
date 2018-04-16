@@ -89,7 +89,7 @@ class ConditionalGenerator(nn.Module):
     @staticmethod
     def load(corpus: Corpus):
         state_dict = torch.load(FilePathManager.resolve("models/generator.pth"))
-        state_dict = remove_module(state_dict["state_dict"])
+        state_dict = state_dict["state_dict"]
         generator = ConditionalGenerator(corpus)
         generator.load_state_dict(state_dict)
         return generator
