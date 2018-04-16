@@ -41,7 +41,7 @@ class VggExtractor(BaseExtractor):
             image = cv2.imread(image)
             image = cv2torch(image)
         if isinstance(image, np.ndarray):
-            image = torch.from_numpy(image)
+            image = cv2torch(image)
         image = image.float()
         image = self.trans(image)
         if len(image.size()) == 3:

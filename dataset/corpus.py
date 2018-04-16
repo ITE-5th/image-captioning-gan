@@ -15,18 +15,17 @@ class Corpus:
     UNK = "<unk>"
     PAD = "<pad>"
 
-    def __init__(self, word2idx=None, idx2word=None):
+    def __init__(self, word2idx=None, idx2word=None, word_embeddings=None):
         self.word2idx = word2idx if word2idx is not None else {}
         self.idx2word = idx2word if idx2word is not None else {}
+        self.fast_text = word_embeddings if word_embeddings is not None else {}
         self.vocab_size = len(self.word2idx)
         self.embed_size = 300
         self.max_sentence_length = 16
-        self.min_word_freq = 6
-        self.fast_text = FastText.load(FilePathManager.resolve("data/fasttext.model"), mmap="r")
+        self.min_word_freq = 5
 
     def word_embedding(self, word):
-        if (word not in self.word2idx and word not in self.idx2word) \
-                or (isinstance(word, str) and word not in self.fast_text):
+        if word not in self.word2idx and word not in self.idx2word:
             word = self.UNK
         if isinstance(word, int):
             word = self.word_from_index(word)
@@ -70,14 +69,16 @@ class Corpus:
                     for token in tokens:
                         self.word2idx[token] += 1
         temp = {}
+        embeddings = {}
+        fast_text = FastText.load(FilePathManager.resolve("data/fasttext.model"), mmap="r")
         for k, v in self.word2idx.items():
             if v >= self.min_word_freq:
                 temp[k] = len(temp)
+                embeddings[k] = fast_text[k] if k in fast_text else fast_text[self.UNK]
         self.word2idx = temp
         # swap keys and values
         self.idx2word = dict(zip(self.word2idx.values(), self.word2idx.keys()))
-        with open(FilePathManager.resolve("data/vocabs.txt"), "w") as f:
-            f.write("\n".join(list(self.word2idx.keys())))
+        self.fast_text = embeddings
 
     @staticmethod
     def remove_nonalpha(word: str):
@@ -101,9 +102,10 @@ class Corpus:
             tokens.extend([self.PAD] * (self.max_sentence_length - temp))
         return tokens
 
-    def embed_sentence(self, sentence: str, one_hot=False):
+    def embed_sentence(self, sentence: str, one_hot=False, pad: bool = True):
         tokens = self.tokenize(sentence)
-        tokens = self.pad_sentence(tokens)
+        if pad:
+            tokens = self.pad_sentence(tokens)
         result = torch.zeros(self.max_sentence_length, self.vocab_size if one_hot else self.embed_size)
         for i in range(self.max_sentence_length):
             result[i] = self.word_one_hot(tokens[i]) if one_hot else self.word_embedding(tokens[i])
@@ -114,13 +116,13 @@ class Corpus:
 
     def store(self, file_path):
         with open(file_path, "wb") as f:
-            pickle.dump((self.word2idx, self.idx2word), f)
+            pickle.dump((self.word2idx, self.idx2word, self.fast_text), f)
 
     @staticmethod
     def load(file_path):
         with open(file_path, "rb") as f:
-            word2idx, idx2word = pickle.load(f)
-        return Corpus(word2idx, idx2word)
+            word2idx, idx2word, fast_text = pickle.load(f)
+        return Corpus(word2idx, idx2word, fast_text)
 
 
 if __name__ == '__main__':
