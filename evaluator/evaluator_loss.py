@@ -9,8 +9,8 @@ class EvaluatorLoss(nn.Module):
         self.alpha = alpha
         self.beta = beta
 
-    def forward(self, true_outputs, generator_outputs, other_outputs):
-        result = torch.log(true_outputs) + self.alpha + torch.log(1 - generator_outputs) + self.beta * torch.log(
+    def forward(self, evaluator_outputs, generator_outputs, other_outputs):
+        result = torch.log(evaluator_outputs) + self.alpha + torch.log(1 - generator_outputs) + self.beta * torch.log(
             1 - other_outputs)
         result = -result
         return result

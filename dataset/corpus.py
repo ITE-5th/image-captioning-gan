@@ -119,6 +119,7 @@ class Corpus:
         return tokens
 
     def embed_sentence(self, sentence: str, one_hot=False, pad: bool = True):
+        sentence = f"{self.START_SYMBOL} {sentence} {self.END_SYMBOL}"
         tokens = self.tokenize(sentence)
         if pad:
             tokens = self.pad_sentence(tokens)

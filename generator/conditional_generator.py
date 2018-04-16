@@ -54,7 +54,7 @@ class ConditionalGenerator(nn.Module):
     def forward(self, features, captions):
         states = self.init_hidden(features)
         hiddens, _ = self.lstm(captions, states)
-        outputs = self.output_linear(hiddens.squeeze(1))
+        outputs = self.output_linear(hiddens[0])
         return outputs
 
     def sample_single_with_embedding(self, image_features):
@@ -71,7 +71,7 @@ class ConditionalGenerator(nn.Module):
 
     def sample_with_embedding(self, images_features):
         batch_size = images_features.size(0)
-        result = torch.zeros(batch_size, self.max_sentence_length, self.embed.embed_size)
+        result = torch.zeros(batch_size, self.max_sentence_length, self.embed.embed_size).cuda()
         hidden = self.init_hidden(images_features)
         inputs = self.embed.word_embeddings([self.embed.START_SYMBOL] * batch_size)
         for i in range(self.max_sentence_length):
@@ -80,7 +80,7 @@ class ConditionalGenerator(nn.Module):
             outputs = self.output_linear(hidden)
             predicted = outputs.max(1)[1]
             predicted = predicted.view(-1)
-            inputs = self.embed.word_embeddings_from_indices(predicted)
+            inputs = self.embed.word_embeddings_from_indices(predicted).cuda()
         return result
 
     def save(self):

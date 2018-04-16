@@ -26,15 +26,20 @@ class CocoDataset(Dataset):
     def __getitem__(self, index):
         temp = index // 5
         image = self.images[temp]
+        image = image.view(-1)
         item = self.captions[temp]
         caption = item[1][index % 5]
-        caption = self.corpus.embed_sentence(caption, one_hot=not self.evaluator)
-        other_index = random.choice([k for k in range(self.length // 5) if k != temp])
-        other_caption = self.captions[other_index]
-        other_index = random.choice(range(4))
-        other_caption = other_caption[1][other_index]
-        other_caption = self.corpus.embed_sentence(other_caption, one_hot=not self.evaluator)
-        return image, caption, other_caption
+        caption = self.corpus.embed_sentence(caption, one_hot=False)
+        if self.evaluator:
+            other_index = random.choice([k for k in range(self.length // 5) if k != temp])
+            other_caption = self.captions[other_index]
+            other_index = random.choice(range(4))
+            other_caption = other_caption[1][other_index]
+            other_caption = self.corpus.embed_sentence(other_caption, one_hot=False)
+            return image, caption, other_caption
+        else:
+            one_hot = self.corpus.sentence_indices(caption)
+            return image, caption, one_hot
 
     def __len__(self):
         return self.length

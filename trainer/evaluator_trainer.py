@@ -3,6 +3,7 @@ from multiprocessing import cpu_count
 
 from torch import optim
 from torch.autograd import Variable
+from torch.nn.utils.rnn import pack_padded_sequence
 from torch.utils.data import DataLoader
 
 from dataset.coco_dataset import CocoDataset
@@ -29,6 +30,8 @@ if __name__ == '__main__':
         for i, (images, captions, other_captions) in enumerate(dataloader, 0):
             images, captions, other_captions = Variable(images).cuda(), Variable(captions).cuda(), Variable(
                 other_captions).cuda()
+            captions = pack_padded_sequence(captions, [18] * len(images), True)
+            other_captions = pack_padded_sequence(other_captions, [18] * len(images), True)
             optimizer.zero_grad()
             evaluator_outputs = evaluator(images, captions)
             generator_outputs = generator.sample_with_embedding(images)
