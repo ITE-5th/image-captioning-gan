@@ -5,7 +5,6 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 
 from dataset.corpus import Corpus
-from extractor.base_extractor import BaseExtractor
 from extractor.vgg_extractor import VggExtractor
 from file_path_manager import FilePathManager
 
@@ -41,7 +40,7 @@ if __name__ == '__main__':
                                      f"data/annotations/captions_train2017.json"),
                                  transform=transforms.ToTensor())
     print(f"number of images = {len(captions.coco.imgs)}")
-    extractor = VggExtractor(use_gpu=True, pretrained=False)
+    extractor = VggExtractor(use_gpu=True, pretrained=True)
     images = []
     i = 1
     for image, _ in captions:

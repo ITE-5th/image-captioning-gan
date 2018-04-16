@@ -1,3 +1,5 @@
+import gensim
+
 from gensim.models.wrappers.fasttext import FastText
 
 from file_path_manager import FilePathManager

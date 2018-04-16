@@ -83,7 +83,8 @@ class Corpus:
     def remove_nonalpha(word: str):
         return word.strip().strip(".")
 
-    def preprocess_sentence(self, sentence: str):
+    @staticmethod
+    def preprocess_sentence(sentence: str):
         sentence = sentence.lower().strip().strip(".").replace("'", "").replace(",", " , ").replace("\"", "")
         return sentence
 

@@ -47,8 +47,16 @@ class ConditionalGenerator(nn.Module):
         )
 
     def init_hidden(self, image_features):
-        return self.features_linear(torch.cat((image_features, self.dist.sample()), 1)), \
-               Variable(torch.zeros(1, 1, self.input_encoding_size))
+
+        # generate noise
+        noise = self.dist.sample().unsqueeze(0)
+
+        # hidden of shape (num_layers * num_directions, batch, hidden_size)
+        hidden = self.features_linear(torch.cat((image_features, noise), 1).unsqueeze(0))
+
+        # cell of shape (num_layers * num_directions, batch, hidden_size)
+        cell = Variable(torch.zeros(1, image_features.shape[0], self.input_encoding_size))
+        return hidden, cell
 
     def forward(self, features, captions):
         embeddings = self.embed(captions)
@@ -103,7 +111,6 @@ class ConditionalGenerator(nn.Module):
 if __name__ == '__main__':
     if not os.path.exists(FilePathManager.resolve("models")):
         os.makedirs(FilePathManager.resolve("models"))
-    extractor = VggExtractor(use_gpu=True, pretrained=False)
     corpus = Corpus.load(FilePathManager.resolve("data/corpus.pkl"))
     print("Corpus loaded")
     dataset = CocoDataset(corpus, evaluator=False)
@@ -118,9 +125,14 @@ if __name__ == '__main__':
         for i, (images, captions) in enumerate(dataloader, 0):
             print(f"Batch = {i + 1}")
             images, captions = Variable(images).cuda(), Variable(captions).cuda()
+
+            inputs = captions[:, :-1]
+            targets = captions[:, 1:]
+
             optimizer.zero_grad()
-            outputs = generator.forward(images, logits=True)
-            loss = criterion(outputs, captions)
+            outputs = generator.forward(images, inputs)
+
+            loss = criterion(outputs, targets)
             loss.backward()
             optimizer.step()
             torch.save({"state_dict": generator.state_dict()}, FilePathManager.resolve("models/generator.pth"))
