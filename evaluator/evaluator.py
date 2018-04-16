@@ -11,7 +11,6 @@ from dataset.coco_dataset import CocoDataset
 from dataset.corpus import Corpus
 from extractor.vgg_extractor import VggExtractor
 from file_path_manager import FilePathManager
-from misc.net_utils import save_checkpoint
 
 
 class Evaluator(nn.Module):
