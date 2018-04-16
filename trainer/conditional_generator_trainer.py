@@ -2,7 +2,6 @@ import os
 import time
 from multiprocessing import cpu_count
 
-import torch
 from pretrainedmodels import utils
 from torch import nn
 from torch.autograd import Variable
@@ -50,5 +49,5 @@ for epoch in range(epochs):
         loss = criterion(outputs, target)
         loss.backward()
         optimizer.step()
-    torch.save({"state_dict": generator.state_dict()}, FilePathManager.resolve("models/generator.pth"))
     print(f"Epoch = {epoch + 1}")
+    generator.save()
