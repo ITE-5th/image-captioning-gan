@@ -76,7 +76,7 @@ class ConditionalGenerator(nn.Module):
             predicted = outputs.max(1)[1]
             sampled_indices.append(predicted)
             inputs = self.embed.word_embedding(predicted)
-            done = predicted == self.embed.word_index(self.dict.END_SYMBOL)
+            done = predicted == self.embed.word_index(self.embed.END_SYMBOL)
         sampled_indices = torch.cat(sampled_indices, 0)
         logits = torch.cat(logits, 0)
         return sampled_indices.squeeze() if not return_logits else logits.squeeze()
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     extractor = VggExtractor(use_gpu=True, pretrained=False)
     corpus = Corpus.load(FilePathManager.resolve("data/corpus.pkl"))
     print("Corpus loaded")
-    dataset = CocoDataset(corpus, extractor, evaluator=False)
+    dataset = CocoDataset(corpus, evaluator=False)
     batch_size = 2
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=cpu_count())
     generator = ConditionalGenerator(corpus).cuda()
