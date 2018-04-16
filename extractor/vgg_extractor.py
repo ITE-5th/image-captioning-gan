@@ -19,7 +19,6 @@ class VggExtractor(BaseExtractor):
         self.cnn = vgg16()
         self.trans = utils.TransformImage(self.cnn)
         self.trans = transforms.Compose([transforms.ToPILImage(), self.trans])
-        self.cnn = nn.Sequential(*list(self.cnn.children())[:-1])
         if use_gpu:
             self.cnn = self.cnn.cuda()
         self.cnn.eval()
@@ -31,17 +30,18 @@ class VggExtractor(BaseExtractor):
             image = cv2.imread(image)
         if isinstance(image, np.ndarray):
             image = cv2torch(image)
-        image = image.float()
         image = self.trans(image)
+        image = image.float()
         if len(image.size()) == 3:
             image = image.unsqueeze(0)
         if self.use_gpu:
             image = image.cuda()
-        temp = self.cnn(Variable(image))
+        image = Variable(image)
+        temp = self.cnn.features(image)
         return temp
 
 
 if __name__ == '__main__':
-    extractor = VggExtractor()
+    extractor = VggExtractor(use_gpu=True)
     image_path = FilePathManager.resolve("test_images/image_1.png")
     print(extractor.forward(image_path))

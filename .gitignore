@@ -1,4 +1,5 @@
 .idea
-data
+data/*
+!data/corpus.pkl
 __pycache__
 models
