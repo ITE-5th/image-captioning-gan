@@ -126,9 +126,10 @@ class Corpus:
 
 
 if __name__ == '__main__':
-    corpus = Corpus()
-    corpus.prepare()
-    corpus.store(FilePathManager.resolve("data/corpus.pkl"))
-    # corpus = Corpus.load(FilePathManager.resolve("data/corpus.pkl"))
-    # print(corpus.word_one_hot("test"))
-    # print(corpus.vocab_size)
+    # corpus = Corpus()
+    # corpus.prepare()
+    # corpus.store(FilePathManager.resolve("data/corpus.pkl"))
+    corpus = Corpus.load(FilePathManager.resolve("data/corpus.pkl"))
+    print(corpus.word_one_hot("<unk>"))
+    print(corpus.word_embedding("<unk>"))
+    print(corpus.vocab_size)
