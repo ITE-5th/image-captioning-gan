@@ -17,6 +17,7 @@ class Evaluator(nn.Module):
             nn.Linear(cnn_features_size, input_encoding_size),
             nn.ReLU()
         )
+        self.sigmoid = nn.Sigmoid()
 
     def init_hidden(self, batch_size):
         return Variable(torch.randn(1, batch_size, self.input_encoding_size)).cuda(), Variable(
@@ -29,8 +30,10 @@ class Evaluator(nn.Module):
         hidden = hidden[0]
         hidden = hidden.view(batch_size, -1)
         image_features = self.linear(image_features)
-        image_features = image_features.view(image_features.size(0), -1)
-        return torch.bmm(image_features.view(batch_size, 1, -1), hidden.view(batch_size, -1, 1))
+        image_features = image_features.view(batch_size, -1)
+        sim = torch.bmm(image_features.view(batch_size, 1, -1), hidden.view(batch_size, -1, 1))
+        sim = self.sigmoid(sim)
+        return sim
 
     def save(self):
         torch.save({"state_dict": self.state_dict()}, FilePathManager.resolve("models/evaluator.pth"))
