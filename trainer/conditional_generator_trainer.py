@@ -30,7 +30,7 @@ dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_worker
 generator = ConditionalGenerator(corpus).cuda()
 criterion = nn.CrossEntropyLoss(ignore_index=corpus.word_index(corpus.PAD)).cuda()
 optimizer = Adam(generator.parameters(), lr=0.0001, weight_decay=1e-5)
-
+nn.MSELoss
 epochs = 20
 
 start = time.time()

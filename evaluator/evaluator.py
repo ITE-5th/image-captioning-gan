@@ -33,6 +33,7 @@ class Evaluator(nn.Module):
         image_features = image_features.view(batch_size, -1)
         sim = torch.bmm(image_features.view(batch_size, 1, -1), hidden.view(batch_size, -1, 1))
         sim = self.sigmoid(sim)
+        sim = sim.view(-1)
         return sim
 
     def save(self):

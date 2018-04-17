@@ -112,7 +112,7 @@ class ConditionalGenerator(nn.Module):
         for i in range(self.max_sentence_length):
             # store the result
             result[:, i] = inputs.squeeze(1)
-
+            inputs = Variable(inputs)
             _, hidden = self.lstm(inputs, hidden)
             outputs = self.output_linear(hidden[0]).squeeze(0)
             predicted = outputs.max(-1)[1]
