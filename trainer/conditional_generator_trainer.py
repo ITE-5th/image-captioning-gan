@@ -23,7 +23,7 @@ tf_img = utils.TransformImage(extractor.cnn)
 corpus = Corpus.load(FilePathManager.resolve("data/corpus.pkl"))
 print("Corpus loaded")
 
-batch_size = 128
+batch_size = 96
 dataset = CocoDataset(corpus, evaluator=False)
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=cpu_count())
 
@@ -38,7 +38,6 @@ print(f"number of batches = {len(dataset) // batch_size}")
 print("Begin Training")
 for epoch in range(epochs):
     for i, (images, inputs, targets) in enumerate(dataloader, 0):
-        print(f"Batch = {i + 1}")
         images = Variable(images).cuda()
         input = Variable(inputs)[:, :-1, :].cuda()
         target = Variable(targets)[:, 1:].cuda()
@@ -49,5 +48,8 @@ for epoch in range(epochs):
         loss = criterion(outputs, target)
         loss.backward()
         optimizer.step()
+        end = time.time()
+        print(f"Batch Time {end - start}")
+        start = end
     print(f"Epoch = {epoch + 1}")
     generator.save()
