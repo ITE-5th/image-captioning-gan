@@ -57,32 +57,69 @@ class ConditionalGenerator(nn.Module):
         return outputs
 
     def sample_single_with_embedding(self, image_features):
+        batch_size = image_features.size(0)
+
+        # init the result with zeros, and lstm states
         result = torch.zeros(self.max_sentence_length, self.embed.embed_size)
         hidden = self.init_hidden(image_features)
-        inputs = self.embed.word_embedding(self.embed.START_SYMBOL)
+
+        inputs = self.embed.word_embeddings([self.embed.START_SYMBOL] * batch_size).unsqueeze(1).cuda()
+
         for i in range(self.max_sentence_length):
-            outputs, hidden = self.lstm(inputs, hidden)
-            outputs = self.output_linear(hidden)
-            predicted = outputs.max(1)[1]
-            inputs = self.embed.word_embedding_from_index(predicted)
-            result[i, :] = inputs
+            result[i] = inputs.squeeze(1)
+            _, hidden = self.lstm(inputs, hidden)
+            outputs = self.output_linear(hidden[0]).squeeze(0)
+            predicted = outputs.max(-1)[1]
+
+            # embed the next inputs, unsqueeze is required 'cause of shape (batch_size, 1, embedding_size)
+            inputs = self.embed.word_embeddings_from_indices(predicted.cpu().data.numpy()).unsqueeze(1).cuda()
+
+        return result
+
+    def sample(self, image_features):
+        batch_size = image_features.size(0)
+
+        # init the result with zeros and lstm states
+        result = torch.zeros(batch_size, self.max_sentence_length).cuda()
+        hidden = self.init_hidden(image_features)
+
+        # embed the start symbol
+        inputs = self.embed.word_embeddings([self.embed.START_SYMBOL] * batch_size).unsqueeze(1).cuda()
+
+        for i in range(self.max_sentence_length):
+            _, hidden = self.lstm(inputs, hidden)
+            outputs = self.output_linear(hidden[0]).squeeze(0)
+            predicted = outputs.max(-1)[1]
+
+            # embed the next inputs, unsqueeze is required 'cause of shape (batch_size, 1, embedding_size)
+            inputs = self.embed.word_embeddings_from_indices(predicted.cpu().data.numpy()).unsqueeze(1).cuda()
+
+            # store the result
+            result[:, i] = predicted
+
         return result
 
     def sample_with_embedding(self, images_features):
         batch_size = images_features.size(0)
+
+        # init the result with zeros and lstm states
         result = torch.zeros(batch_size, self.max_sentence_length, self.embed.embed_size).cuda()
         hidden = self.init_hidden(images_features)
-        inputs = self.embed.word_embeddings([self.embed.START_SYMBOL] * batch_size)
+
+        # embed the start symbol
+        inputs = self.embed.word_embeddings([self.embed.START_SYMBOL] * batch_size).unsqueeze(1).cuda()
+
         for i in range(self.max_sentence_length):
-            result[:, i, :] = inputs
-            inputs = Variable(inputs).cuda()
-            inputs = inputs.view(batch_size, 1, -1)
-            outputs, hidden = self.lstm(inputs, hidden)
-            outputs = self.output_linear(hidden[0])
-            outputs = outputs.squeeze(0)
+            # store the result
+            result[:, i] = inputs.squeeze(1)
+
+            _, hidden = self.lstm(inputs, hidden)
+            outputs = self.output_linear(hidden[0]).squeeze(0)
             predicted = outputs.max(-1)[1]
-            predicted = predicted.view(-1)
-            inputs = self.embed.word_embeddings_from_indices(predicted.cpu().data).cuda()
+
+            # embed the next inputs, unsqueeze is required 'cause of shape (batch_size, 1, embedding_size)
+            inputs = self.embed.word_embeddings_from_indices(predicted.cpu().data.numpy()).unsqueeze(1).cuda()
+
         return Variable(result)
 
     def save(self):
