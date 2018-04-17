@@ -5,7 +5,6 @@ from torch.distributions import Normal
 
 from dataset.corpus import Corpus
 from file_path_manager import FilePathManager
-from misc.net_util import remove_module
 
 
 class ConditionalGenerator(nn.Module):
@@ -76,12 +75,15 @@ class ConditionalGenerator(nn.Module):
         inputs = self.embed.word_embeddings([self.embed.START_SYMBOL] * batch_size)
         for i in range(self.max_sentence_length):
             result[:, i, :] = inputs
+            inputs = Variable(inputs).cuda()
+            inputs = inputs.view(batch_size, 1, -1)
             outputs, hidden = self.lstm(inputs, hidden)
-            outputs = self.output_linear(hidden)
-            predicted = outputs.max(1)[1]
+            outputs = self.output_linear(hidden[0])
+            outputs = outputs.squeeze(0)
+            predicted = outputs.max(-1)[1]
             predicted = predicted.view(-1)
-            inputs = self.embed.word_embeddings_from_indices(predicted).cuda()
-        return result
+            inputs = self.embed.word_embeddings_from_indices(predicted.cpu().data).cuda()
+        return Variable(result)
 
     def save(self):
         torch.save({"state_dict": self.state_dict()}, FilePathManager.resolve("models/generator.pth"))
