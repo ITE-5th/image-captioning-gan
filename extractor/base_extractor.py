@@ -6,5 +6,5 @@ class BaseExtractor(metaclass=ABCMeta):
         self.use_gpu = use_gpu
 
     @abstractmethod
-    def forward(self, image):
+    def extract(self, image):
         raise NotImplementedError()

@@ -21,7 +21,7 @@ class TestDataset(Dataset):
     def __getitem__(self, index):
         image, caption = self.captions[index]
 
-        item = self.extractor.forward(image).cpu().data
+        item = self.extractor.extract(image).cpu().data
         caption = self.corpus.embed_sentence(caption[0], one_hot=not self.evaluator)
 
         return item, caption

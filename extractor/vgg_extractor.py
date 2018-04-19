@@ -25,7 +25,7 @@ class VggExtractor(BaseExtractor):
         for param in self.cnn.parameters():
             param.requires_grad = False
 
-    def forward(self, image):
+    def extract(self, image):
         if isinstance(image, str):
             image = cv2.imread(image)
         if isinstance(image, np.ndarray):
@@ -44,4 +44,4 @@ class VggExtractor(BaseExtractor):
 if __name__ == '__main__':
     extractor = VggExtractor(use_gpu=True)
     image_path = FilePathManager.resolve("test_images/image_1.png")
-    print(extractor.forward(image_path))
+    print(extractor.extract(image_path))

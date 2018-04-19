@@ -4,6 +4,7 @@ from torch.autograd import Variable
 from torch.distributions import Normal
 
 from dataset.corpus import Corpus
+from extractor.vgg_extractor import VggExtractor
 from file_path_manager import FilePathManager
 
 
@@ -87,6 +88,7 @@ class ConditionalGenerator(nn.Module):
         inputs = self.embed.word_embeddings([self.embed.START_SYMBOL] * batch_size).unsqueeze(1).cuda()
 
         for i in range(self.max_sentence_length):
+            inputs = Variable(inputs)
             _, hidden = self.lstm(inputs, hidden)
             outputs = self.output_linear(hidden[0]).squeeze(0)
             predicted = outputs.max(-1)[1]
@@ -95,7 +97,7 @@ class ConditionalGenerator(nn.Module):
             inputs = self.embed.word_embeddings_from_indices(predicted.cpu().data.numpy()).unsqueeze(1).cuda()
 
             # store the result
-            result[:, i] = predicted
+            result[:, i] = predicted.data
 
         return result
 
@@ -132,3 +134,11 @@ class ConditionalGenerator(nn.Module):
         generator = ConditionalGenerator(corpus)
         generator.load_state_dict(state_dict)
         return generator
+
+
+if __name__ == '__main__':
+    corpus = Corpus.load(FilePathManager.resolve("data/corpus.pkl"))
+    generator = ConditionalGenerator.load(corpus).cuda()
+    extractor = VggExtractor()
+    image = extractor.extract(FilePathManager.resolve("test_images/image_1.png"))
+    print(generator.sample(image))
