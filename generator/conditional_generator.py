@@ -82,7 +82,7 @@ class ConditionalGenerator(nn.Module):
         batch_size = image_features.size(0)
 
         # init the result with zeros and lstm states
-        result = torch.zeros(batch_size, self.max_sentence_length).cuda()
+        result = []
         hidden = self.init_hidden(image_features)
 
         # embed the start symbol
