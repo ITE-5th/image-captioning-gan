@@ -4,6 +4,7 @@ from torch.autograd import Variable
 from torch.distributions import Normal
 
 from dataset.corpus import Corpus
+from extractor.vgg_extractor import VggExtractor
 from file_path_manager import FilePathManager
 from misc.beam_search import BeamSearch
 
@@ -41,7 +42,7 @@ class ConditionalGenerator(nn.Module):
     def init_hidden(self, image_features):
 
         # generate rand
-        rand = self.dist.sample_n(image_features.shape[0]).cuda()
+        rand = self.dist.sample((image_features.shape[0],)).cuda()
 
         # hidden of shape (num_layers * num_directions, batch, hidden_size)
         hidden = self.features_linear(torch.cat((image_features, rand), 1).unsqueeze(0))
