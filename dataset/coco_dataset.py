@@ -56,7 +56,7 @@ if __name__ == '__main__':
     i = 1
     for image, _ in captions:
         print(f"caption = {i}")
-        item = extractor.forward(image).cpu().data
+        item = extractor.extract(image).cpu().data
         images.append(item)
         i += 1
     with open(FilePathManager.resolve("data/embedded_images.pkl"), "wb") as f:

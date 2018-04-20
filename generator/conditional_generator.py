@@ -41,7 +41,7 @@ class ConditionalGenerator(nn.Module):
     def init_hidden(self, image_features):
 
         # generate rand
-        rand = self.dist.sample((image_features.shape[0],)).cuda()
+        rand = self.dist.sample_n(image_features.shape[0]).cuda()
 
         # hidden of shape (num_layers * num_directions, batch, hidden_size)
         hidden = self.features_linear(torch.cat((image_features, rand), 1).unsqueeze(0))
@@ -81,17 +81,18 @@ class ConditionalGenerator(nn.Module):
         batch_size = image_features.size(0)
 
         # init the result with zeros and lstm states
-        result = []
-        states = self.init_hidden(image_features)
+        result = torch.zeros(batch_size, self.max_sentence_length).cuda()
+        hidden = self.init_hidden(image_features)
 
         # embed the start symbol
         # inputs = self.embed.word_embeddings(["car"] * batch_size).unsqueeze(1).cuda()
         inputs = self.embed.word_embeddings([self.embed.START_SYMBOL] * batch_size).unsqueeze(1).cuda()
 
         for i in range(self.max_sentence_length):
-            hidden, states = self.lstm(inputs, states)
-            outputs = self.output_linear(hidden.squeeze(1))  # .squeeze(0)
-            predicted = outputs.max(1)[1]
+            inputs = Variable(inputs)
+            _, hidden = self.lstm(inputs, hidden)
+            outputs = self.output_linear(hidden[0]).squeeze(0)
+            predicted = outputs.max(-1)[1]
 
             # embed the next inputs, unsqueeze is required 'cause of shape (batch_size, 1, embedding_size)
             inputs = self.embed.word_embeddings_from_indices(predicted.cpu().data.numpy()).unsqueeze(1).cuda()
@@ -163,3 +164,11 @@ class ConditionalGenerator(nn.Module):
         generator = ConditionalGenerator(corpus)
         generator.load_state_dict(state_dict)
         return generator
+
+
+if __name__ == '__main__':
+    corpus = Corpus.load(FilePathManager.resolve("data/corpus.pkl"))
+    generator = ConditionalGenerator.load(corpus).cuda()
+    extractor = VggExtractor()
+    image = extractor.extract(FilePathManager.resolve("test_images/image_1.png"))
+    print(generator.sample(image))
