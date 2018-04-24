@@ -1,4 +1,5 @@
 import pickle
+import string
 from collections import defaultdict
 
 import torch
@@ -102,14 +103,15 @@ class Corpus:
 
     @staticmethod
     def preprocess_sentence(sentence: str):
-        sentence = sentence.lower().strip().strip(".").replace("'", "").replace(",", " , ").replace("\"", "")
+        sentence = sentence.lower().strip().strip(".").replace("'", "").replace(",,", ",").replace(",", " , ").replace(
+            "\"", "")
         return sentence
 
     def tokenize(self, sentence: str):
         temp = self.preprocess_sentence(sentence).split(" ")
         return [self.remove_nonalpha(x)
                 for x in temp
-                if not x.isspace()]
+                if not x.isspace() and x != "" and all(c in string.printable for c in x)]
 
     def pad_sentence(self, tokens):
         tokens = tokens[:self.max_sentence_length]
@@ -153,6 +155,6 @@ if __name__ == '__main__':
     # corpus.prepare()
     # corpus.store(FilePathManager.resolve("data/corpus.pkl"))
     corpus = Corpus.load(FilePathManager.resolve("data/corpus.pkl"))
-    print(corpus.word_one_hot("<unk>"))
-    print(corpus.word_embedding("<unk>"))
+    unknown = corpus.word_one_hot(corpus.UNK)
     print(corpus.vocab_size)
+    print((corpus.word_one_hot(", ") == unknown).sum())

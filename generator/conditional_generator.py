@@ -124,6 +124,10 @@ class ConditionalGenerator(nn.Module):
 
         return Variable(result)
 
+    def freeze(self):
+        for param in self.parameters():
+            param.requires_grad = False
+
     def save(self):
         torch.save({"state_dict": self.state_dict()}, FilePathManager.resolve("models/generator.pth"))
 

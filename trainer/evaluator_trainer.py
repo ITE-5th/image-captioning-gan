@@ -20,8 +20,9 @@ if __name__ == '__main__':
     corpus = Corpus.load(FilePathManager.resolve("data/corpus.pkl"))
     evaluator = Evaluator(corpus).cuda()
     generator = ConditionalGenerator.load(corpus).cuda()
+    generator.freeze()
     dataset = CocoDataset(corpus, evaluator=True)
-    batch_size = 96
+    batch_size = 128
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=cpu_count())
     criterion = EvaluatorLoss().cuda()
     optimizer = optim.Adam(evaluator.parameters(), lr=0.001, weight_decay=1e-5)
