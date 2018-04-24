@@ -6,6 +6,7 @@ from torch.distributions import Normal
 from dataset.corpus import Corpus
 from extractor.vgg_extractor import VggExtractor
 from file_path_manager import FilePathManager
+from misc.beam_search import BeamSearch
 
 
 class ConditionalGenerator(nn.Module):
@@ -41,7 +42,7 @@ class ConditionalGenerator(nn.Module):
     def init_hidden(self, image_features):
 
         # generate rand
-        rand = self.dist.sample_n(image_features.shape[0]).cuda()
+        rand = self.dist.sample((image_features.shape[0],)).cuda()
 
         # hidden of shape (num_layers * num_directions, batch, hidden_size)
         hidden = self.features_linear(torch.cat((image_features, rand), 1).unsqueeze(0))
@@ -77,14 +78,15 @@ class ConditionalGenerator(nn.Module):
 
         return result
 
-    def sample(self, image_features):
+    def sample(self, image_features, return_sentence=True):
         batch_size = image_features.size(0)
 
         # init the result with zeros and lstm states
-        result = torch.zeros(batch_size, self.max_sentence_length).cuda()
+        result = []
         hidden = self.init_hidden(image_features)
 
         # embed the start symbol
+        # inputs = self.embed.word_embeddings(["car"] * batch_size).unsqueeze(1).cuda()
         inputs = self.embed.word_embeddings([self.embed.START_SYMBOL] * batch_size).unsqueeze(1).cuda()
 
         for i in range(self.max_sentence_length):
@@ -97,9 +99,38 @@ class ConditionalGenerator(nn.Module):
             inputs = self.embed.word_embeddings_from_indices(predicted.cpu().data.numpy()).unsqueeze(1).cuda()
 
             # store the result
-            result[:, i] = predicted.data
+            result.append(self.embed.word_from_index(predicted.cpu().numpy()[0]))
+
+        if return_sentence:
+            result = " ".join(list(filter(lambda x: x != self.embed.END_SYMBOL, result)))
 
         return result
+
+    def beam_sample(self, image_features, beam_size=5):
+        # self.beam_size = 5
+        batch_size = image_features.size(0)
+        beam_searcher = BeamSearch(beam_size, 1, 17)
+
+        # init the result with zeros and lstm states
+        states = self.init_hidden(image_features)
+        states = (states[0].repeat(1, beam_size, 1).cuda(), states[1].repeat(1, beam_size, 1).cuda())
+
+        # embed the start symbol
+        words_feed = self.embed.word_embeddings([self.embed.START_SYMBOL] * batch_size) \
+            .repeat(beam_size, 1).unsqueeze(1).cuda()
+
+        for i in range(self.max_sentence_length):
+            hidden, states = self.lstm(words_feed, states)
+            outputs = self.output_linear(hidden.squeeze(1))
+            beam_indices, words_indices = beam_searcher.expand_beam(outputs=outputs)
+
+            if len(beam_indices) == 0 or i == 15:
+                generated_captions = beam_searcher.get_results()[:, 0]
+                outcaps = self.embed.words_from_indices(generated_captions.cpu().numpy())
+            else:
+                words_feed = torch.stack([self.embed.word_embeddings_from_indices(words_indices)]).view(
+                    beam_size, 1, -1).cuda()
+        return " ".join(outcaps).split(self.embed.END_SYMBOL)[0]
 
     def sample_with_embedding(self, images_features):
         batch_size = images_features.size(0)

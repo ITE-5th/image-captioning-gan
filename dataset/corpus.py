@@ -64,6 +64,9 @@ class Corpus:
     def word_from_index(self, index):
         return self.idx2word[index]
 
+    def words_from_indices(self, indices):
+        return [self.word_from_index(index) for index in indices]
+
     def add_word(self, word: str):
         if word not in self.word2idx:
             self.word2idx[word] = len(self.word2idx)
