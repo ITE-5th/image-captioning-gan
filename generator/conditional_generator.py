@@ -1,7 +1,9 @@
+import copy
+
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
-from torch.distributions import Normal
+from torch.distributions import Normal, Categorical
 
 from dataset.corpus import Corpus
 from extractor.vgg_extractor import VggExtractor
@@ -21,7 +23,6 @@ class ConditionalGenerator(nn.Module):
                  num_layers: int = 1,
                  dropout: float = 0):
         super().__init__()
-
         self.cnn_output_size = cnn_output_size
         self.input_encoding_size = input_encoding_size
         self.max_sentence_length = max_sentence_length
@@ -58,25 +59,50 @@ class ConditionalGenerator(nn.Module):
         outputs = self.output_linear(hiddens[0])
         return outputs
 
-    def sample_single_with_embedding(self, image_features):
+    def reward_forward(self, image_features, evaluator, monte_carlo_count=16):
         batch_size = image_features.size(0)
-
-        # init the result with zeros, and lstm states
-        result = torch.zeros(self.max_sentence_length, self.embed.embed_size)
         hidden = self.init_hidden(image_features)
-
+        net = copy.deepcopy(self)
+        # embed the start symbol
         inputs = self.embed.word_embeddings([self.embed.START_SYMBOL] * batch_size).unsqueeze(1).cuda()
-
+        rewards = torch.zeros(batch_size, self.max_sentence_length)
+        grads = torch.zeros(batch_size, self.max_sentence_length, self.embed.vocab_size)
+        current_generated = inputs
         for i in range(self.max_sentence_length):
-            result[i] = inputs.squeeze(1)
             _, hidden = self.lstm(inputs, hidden)
             outputs = self.output_linear(hidden[0]).squeeze(0)
-            predicted = outputs.max(-1)[1]
-
-            # embed the next inputs, unsqueeze is required 'cause of shape (batch_size, 1, embedding_size)
+            cat = Categorical(probs=outputs)
+            predicted = cat.sample().view(batch_size, -1)
+            # embed the next inputs, unsqueeze is required cause of shape (batch_size, 1, embedding_size)
             inputs = self.embed.word_embeddings_from_indices(predicted.cpu().data.numpy()).unsqueeze(1).cuda()
+            current_generated = torch.cat([current_generated, inputs], dim=1)
+            reward = self.simulate_forward(net, current_generated, image_features, evaluator, monte_carlo_count)
+            rewards[i] = reward.view(batch_size, -1)
+            grads[i] = outputs.grad.view(self.max_sentence_length, -1)
+        return grads, rewards
 
-        return result
+    def simulate_forward(self, net, generated, image_features, evaluator, monte_carlo_count):
+        with torch.no_grad():
+            batch_size = image_features.size(0)
+            hidden = net.init_hidden(image_features)
+            result = torch.zeros(batch_size, 1)
+            remaining = net.max_sentence_length - generator.shape[1]
+            for j in range(monte_carlo_count):
+                current_generated = generated
+                inputs = generated[:, -1].view(batch_size, 1, -1)
+                for i in range(remaining):
+                    _, hidden = net.lstm(inputs, hidden)
+                    outputs = net.output_linear(hidden[0]).squeeze(0)
+                    cat = Categorical(probs=outputs)
+                    predicted = cat.sample().view(batch_size, -1)
+                    # embed the next inputs, unsqueeze is required cause of shape (batch_size, 1, embedding_size)
+                    inputs = net.embed.word_embeddings_from_indices(predicted.cpu().data.numpy()).unsqueeze(1).cuda()
+                    current_generated = torch.cat([current_generated, inputs], dim=1)
+                reward = evaluator(current_generated)
+                reward = reward.view(batch_size, -1)
+                result += reward
+            result /= monte_carlo_count
+            return result
 
     def sample(self, image_features, return_sentence=True):
         batch_size = image_features.size(0)
@@ -103,6 +129,26 @@ class ConditionalGenerator(nn.Module):
 
         if return_sentence:
             result = " ".join(list(filter(lambda x: x != self.embed.END_SYMBOL, result)))
+
+        return result
+
+    def sample_single_with_embedding(self, image_features):
+        batch_size = image_features.size(0)
+
+        # init the result with zeros, and lstm states
+        result = torch.zeros(self.max_sentence_length, self.embed.embed_size)
+        hidden = self.init_hidden(image_features)
+
+        inputs = self.embed.word_embeddings([self.embed.START_SYMBOL] * batch_size).unsqueeze(1).cuda()
+
+        for i in range(self.max_sentence_length):
+            result[i] = inputs.squeeze(1)
+            _, hidden = self.lstm(inputs, hidden)
+            outputs = self.output_linear(hidden[0]).squeeze(0)
+            predicted = outputs.max(-1)[1]
+
+            # embed the next inputs, unsqueeze is required 'cause of shape (batch_size, 1, embedding_size)
+            inputs = self.embed.word_embeddings_from_indices(predicted.cpu().data.numpy()).unsqueeze(1).cuda()
 
         return result
 
@@ -158,6 +204,10 @@ class ConditionalGenerator(nn.Module):
     def freeze(self):
         for param in self.parameters():
             param.requires_grad = False
+
+    def unfreeze(self):
+        for param in self.parameters():
+            param.requires_grad = True
 
     def save(self):
         torch.save({"state_dict": self.state_dict()}, FilePathManager.resolve("models/generator.pth"))

@@ -39,6 +39,14 @@ class Evaluator(nn.Module):
     def save(self):
         torch.save({"state_dict": self.state_dict()}, FilePathManager.resolve("models/evaluator.pth"))
 
+    def freeze(self):
+        for param in self.parameters():
+            param.requires_grad = False
+
+    def unfreeze(self):
+        for param in self.parameters():
+            param.requires_grad = True
+
     @staticmethod
     def load(corpus: Corpus):
         state_dict = torch.load(FilePathManager.resolve("models/evaluator.pth"))
