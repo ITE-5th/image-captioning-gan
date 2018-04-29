@@ -25,7 +25,7 @@ if __name__ == '__main__':
     dataset = CocoDataset(corpus, evaluator=True)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=cpu_count())
     evaluator_criterion = EvaluatorLoss().cuda()
-    generator_criterion = RLLoss.apply
+    generator_criterion = RLLoss().cuda()
     evaluator_optimizer = optim.Adam(evaluator.parameters(), lr=1e-4, weight_decay=1e-5)
     generator_optimizer = optim.Adam(generator.parameters(), lr=1e-4, weight_decay=1e-5)
     print(f"number of batches = {len(dataset) // batch_size}")
@@ -39,9 +39,9 @@ if __name__ == '__main__':
             # generator
             generator.unfreeze()
             evaluator.freeze()
+            rewards, props = generator.reward_forward(images, evaluator, monte_carlo_count=monte_carlo_count)
             generator_optimizer.zero_grad()
-            grads, rewards = generator.reward_forward(images, evaluator, monte_carlo_count=monte_carlo_count)
-            loss = generator_criterion((grads, rewards))
+            loss = generator_criterion(rewards, props)
             loss.backward()
             generator_optimizer.step()
             # evaluator

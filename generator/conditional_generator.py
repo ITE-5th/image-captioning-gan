@@ -3,12 +3,13 @@ import copy
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
-from torch.distributions import Normal, Categorical
+from torch.distributions import Normal
 
 from dataset.corpus import Corpus
 from extractor.vgg_extractor import VggExtractor
 from file_path_manager import FilePathManager
 from misc.beam_search import BeamSearch
+from policy_gradient.rollout import Rollout
 
 
 class ConditionalGenerator(nn.Module):
@@ -19,7 +20,7 @@ class ConditionalGenerator(nn.Module):
                  std: torch.FloatTensor = torch.ones(1024),
                  cnn_output_size: int = 4096,
                  input_encoding_size: int = 512,
-                 max_sentence_length: int = 16,
+                 max_sentence_length: int = 18,
                  num_layers: int = 1,
                  dropout: float = 0):
         super().__init__()
@@ -39,6 +40,7 @@ class ConditionalGenerator(nn.Module):
             nn.Linear(cnn_output_size + len(mean), input_encoding_size),
             nn.ReLU()
         )
+        self.rollout = Rollout(max_sentence_length, corpus)
 
     def init_hidden(self, image_features):
 
@@ -65,46 +67,22 @@ class ConditionalGenerator(nn.Module):
         net = copy.deepcopy(self)
         # embed the start symbol
         inputs = self.embed.word_embeddings([self.embed.START_SYMBOL] * batch_size).unsqueeze(1).cuda()
-        grads = torch.zeros(batch_size, self.max_sentence_length, self.embed.vocab_size)
         rewards = torch.zeros(batch_size, self.max_sentence_length)
+        props = torch.zeros(batch_size, self.max_sentence_length)
         current_generated = inputs
+        self.rollout.update(self)
         for i in range(self.max_sentence_length):
-            _, hidden = self.lstm(inputs, hidden)
-            outputs = self.output_linear(hidden[0]).squeeze(0)
-            cat = Categorical(probs=outputs)
-            predicted = cat.sample().view(batch_size, -1)
+            _, (hidden, cell) = self.lstm(inputs, hidden)
+            outputs = self.output_linear(hidden).squeeze(0)
+            predicted = outputs.multinomial(1).view(batch_size, -1)
+            prop = torch.gather(outputs, 1, predicted)
+            props[:, i] = prop.view(-1)
             # embed the next inputs, unsqueeze is required cause of shape (batch_size, 1, embedding_size)
             inputs = self.embed.word_embeddings_from_indices(predicted.cpu().data.numpy()).unsqueeze(1).cuda()
             current_generated = torch.cat([current_generated, inputs], dim=1)
-            reward = self.simulate_forward(net, current_generated, image_features, evaluator, monte_carlo_count)
-            print(f"reward {reward.shape}")
-            reward = reward.view(batch_size, -1)
-            grads[:, i, :] = outputs.grad.view(batch_size, -1) * reward
+            reward = self.rollout.reward(current_generated, hidden, image_features, monte_carlo_count, evaluator)
             rewards[:, i] = reward.view(-1)
-        return grads, rewards
-
-    def simulate_forward(self, net, generated, image_features, evaluator, monte_carlo_count):
-        with torch.no_grad():
-            batch_size = image_features.size(0)
-            hidden = net.init_hidden(image_features)
-            result = torch.zeros(batch_size, 1)
-            remaining = net.max_sentence_length - generator.shape[1]
-            for j in range(monte_carlo_count):
-                current_generated = generated
-                inputs = generated[:, -1].view(batch_size, 1, -1)
-                for i in range(remaining):
-                    _, hidden = net.lstm(inputs, hidden)
-                    outputs = net.output_linear(hidden[0]).squeeze(0)
-                    cat = Categorical(probs=outputs)
-                    predicted = cat.sample().view(batch_size, -1)
-                    # embed the next inputs, unsqueeze is required cause of shape (batch_size, 1, embedding_size)
-                    inputs = net.embed.word_embeddings_from_indices(predicted.cpu().data.numpy()).unsqueeze(1).cuda()
-                    current_generated = torch.cat([current_generated, inputs], dim=1)
-                reward = evaluator(current_generated)
-                reward = reward.view(batch_size, -1)
-                result += reward
-            result /= monte_carlo_count
-            return result
+        return rewards, props
 
     def sample(self, image_features, return_sentence=True):
         batch_size = image_features.size(0)
