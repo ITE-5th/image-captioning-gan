@@ -43,8 +43,8 @@ if __name__ == '__main__':
             generator.unfreeze()
             evaluator.freeze()
             generator_optimizer.zero_grad()
-            grads, rewards = generator.reward_forward(images, evaluator, monte_carlo_count=monte_carlo_count)
-            loss = generator_criterion(grads, rewards)
+            grads, final_reward = generator.reward_forward(images, evaluator, monte_carlo_count=monte_carlo_count)
+            loss = generator_criterion((grads, final_reward))
             loss.backward()
             generator_optimizer.step()
             # evaluator
