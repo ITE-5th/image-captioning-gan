@@ -66,8 +66,8 @@ class ConditionalGenerator(nn.Module):
         # embed the start symbol
         inputs = self.embed.word_embeddings([self.embed.START_SYMBOL] * batch_size).unsqueeze(1).cuda()
         grads = torch.zeros(batch_size, self.max_sentence_length, self.embed.vocab_size)
+        rewards = torch.zeros(batch_size, self.max_sentence_length)
         current_generated = inputs
-        reward = None
         for i in range(self.max_sentence_length):
             _, hidden = self.lstm(inputs, hidden)
             outputs = self.output_linear(hidden[0]).squeeze(0)
@@ -77,8 +77,11 @@ class ConditionalGenerator(nn.Module):
             inputs = self.embed.word_embeddings_from_indices(predicted.cpu().data.numpy()).unsqueeze(1).cuda()
             current_generated = torch.cat([current_generated, inputs], dim=1)
             reward = self.simulate_forward(net, current_generated, image_features, evaluator, monte_carlo_count)
-            grads[:, i, :] = outputs.grad.view(batch_size, -1) * reward.view(batch_size, -1)
-        return grads, reward
+            print(f"reward {reward.shape}")
+            reward = reward.view(batch_size, -1)
+            grads[:, i, :] = outputs.grad.view(batch_size, -1) * reward
+            rewards[:, i] = reward.view(-1)
+        return grads, rewards
 
     def simulate_forward(self, net, generated, image_features, evaluator, monte_carlo_count):
         with torch.no_grad():

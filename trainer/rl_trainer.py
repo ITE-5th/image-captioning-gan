@@ -1,4 +1,3 @@
-import os
 import time
 from multiprocessing import cpu_count
 
@@ -20,8 +19,6 @@ if __name__ == '__main__':
     epochs = 200
     batch_size = 128
     monte_carlo_count = 16
-    if not os.path.exists(FilePathManager.resolve("models")):
-        os.makedirs(FilePathManager.resolve("models"))
     corpus = Corpus.load(FilePathManager.resolve("data/corpus.pkl"))
     evaluator = Evaluator.load(corpus).cuda()
     generator = ConditionalGenerator.load(corpus).cuda()
@@ -29,8 +26,8 @@ if __name__ == '__main__':
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=cpu_count())
     evaluator_criterion = EvaluatorLoss().cuda()
     generator_criterion = RLLoss.apply
-    evaluator_optimizer = optim.Adam(evaluator.parameters(), lr=4e-4, weight_decay=1e-5)
-    generator_optimizer = optim.Adam(generator.parameters(), lr=4e-4, weight_decay=1e-5)
+    evaluator_optimizer = optim.Adam(evaluator.parameters(), lr=1e-4, weight_decay=1e-5)
+    generator_optimizer = optim.Adam(generator.parameters(), lr=1e-4, weight_decay=1e-5)
     print(f"number of batches = {len(dataset) // batch_size}")
     print("Begin Training")
     for epoch in range(epochs):
@@ -43,8 +40,8 @@ if __name__ == '__main__':
             generator.unfreeze()
             evaluator.freeze()
             generator_optimizer.zero_grad()
-            grads, final_reward = generator.reward_forward(images, evaluator, monte_carlo_count=monte_carlo_count)
-            loss = generator_criterion((grads, final_reward))
+            grads, rewards = generator.reward_forward(images, evaluator, monte_carlo_count=monte_carlo_count)
+            loss = generator_criterion((grads, rewards))
             loss.backward()
             generator_optimizer.step()
             # evaluator

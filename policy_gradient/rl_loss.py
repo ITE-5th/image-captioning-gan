@@ -6,9 +6,10 @@ class RLLoss(Function):
 
     @staticmethod
     def forward(ctx, input):
-        grads, final_reward = input
+        grads, rewards = input
         ctx.save_for_backward(grads)
-        return final_reward.mean()
+        rewards = torch.mean(rewards, dim=1)
+        return rewards.mean()
 
     @staticmethod
     def backward(ctx, grad_output):
