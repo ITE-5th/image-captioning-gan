@@ -35,6 +35,7 @@ if __name__ == '__main__':
             print(f"Batch = {i + 1}")
             images, captions, other_captions = Variable(images).cuda(), Variable(captions).cuda(), Variable(
                 other_captions).cuda()
+            temp = images.shape[0]
             # generator
             generator.unfreeze()
             evaluator.freeze()
@@ -46,7 +47,6 @@ if __name__ == '__main__':
             # evaluator
             evaluator.unfreeze()
             generator.freeze()
-            temp = images.shape[0]
             captions = pack_padded_sequence(captions, [18] * temp, True)
             other_captions = pack_padded_sequence(other_captions, [18] * temp, True)
             generator_outputs = generator.sample_with_embedding(images)
@@ -60,4 +60,5 @@ if __name__ == '__main__':
             print(f"Batch Time {end - start}")
             start = end
         print(f"Epoch = {epoch + 1}")
+        generator.save()
         evaluator.save()
