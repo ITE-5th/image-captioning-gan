@@ -19,8 +19,10 @@ class Rollout:
             batch_size = generated.size(0)
             result = torch.zeros(batch_size, 1)
             remaining = self.max_sentence_length - generated.shape[1]
+            original_hidden = hidden
             for j in range(monte_carlo_count):
                 current_generated = generated
+                hidden = original_hidden
                 inputs = generated[:, -1].view(batch_size, 1, -1)
                 for i in range(remaining):
                     _, hidden = self.lstm(inputs, hidden)

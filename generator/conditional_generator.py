@@ -72,15 +72,15 @@ class ConditionalGenerator(nn.Module):
         current_generated = inputs
         self.rollout.update(self)
         for i in range(self.max_sentence_length):
-            _, (hidden, cell) = self.lstm(inputs, hidden)
-            outputs = self.output_linear(hidden).squeeze(0)
+            _, hidden = self.lstm(inputs, hidden)
+            outputs = self.output_linear(hidden[0]).squeeze(0)
             predicted = outputs.multinomial(1).view(batch_size, -1)
             prop = torch.gather(outputs, 1, predicted)
             props[:, i] = prop.view(-1)
             # embed the next inputs, unsqueeze is required cause of shape (batch_size, 1, embedding_size)
             inputs = self.embed.word_embeddings_from_indices(predicted.cpu().data.numpy()).unsqueeze(1).cuda()
             current_generated = torch.cat([current_generated, inputs], dim=1)
-            reward = self.rollout.reward(current_generated, hidden, image_features, monte_carlo_count, evaluator)
+            reward = self.rollout.reward(current_generated, hidden, monte_carlo_count, evaluator)
             rewards[:, i] = reward.view(-1)
         return rewards, props
 
