@@ -42,4 +42,5 @@ class Rollout:
 
     def update(self, original_model):
         self.lstm = copy.deepcopy(original_model.lstm)
+        self.lstm.flatten_parameters()
         self.output_linear = copy.deepcopy(original_model.output_linear)

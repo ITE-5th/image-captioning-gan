@@ -1,5 +1,3 @@
-import copy
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -63,6 +61,7 @@ class ConditionalGenerator(nn.Module):
         return outputs
 
     def reward_forward(self, image_features, evaluator, monte_carlo_count=16):
+        self.lstm.flatten_parameters()
         batch_size = image_features.size(0)
         hidden = self.init_hidden(image_features)
         # embed the start symbol
