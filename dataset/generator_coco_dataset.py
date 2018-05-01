@@ -1,5 +1,4 @@
 import pickle
-import random
 
 import torchvision.datasets as dset
 from torch.utils.data import Dataset
@@ -10,11 +9,10 @@ from extractor.vgg_extractor import VggExtractor
 from file_path_manager import FilePathManager
 
 
-class CocoDataset(Dataset):
+class GeneratorCocoDataset(Dataset):
 
-    def __init__(self, corpus: Corpus, evaluator: bool = True):
+    def __init__(self, corpus: Corpus):
         self.corpus = corpus
-        self.evaluator = evaluator
         self.captions = dset.CocoCaptions(root=FilePathManager.resolve(f'data/train'),
                                           annFile=FilePathManager.resolve(
                                               f"data/annotations/captions_train2017.json"),
@@ -30,16 +28,8 @@ class CocoDataset(Dataset):
         item = self.captions[temp]
         caption = item[1][index % 5]
         caption = self.corpus.embed_sentence(caption, one_hot=False)
-        if self.evaluator:
-            other_index = random.choice([k for k in range(self.length // 5) if k != temp])
-            other_caption = self.captions[other_index]
-            other_index = random.choice(range(4))
-            other_caption = other_caption[1][other_index]
-            other_caption = self.corpus.embed_sentence(other_caption, one_hot=False)
-            return image, caption, other_caption
-        else:
-            one_hot = self.corpus.sentence_indices(caption)
-            return image, caption, one_hot
+        one_hot = self.corpus.sentence_indices(caption)
+        return image, caption, one_hot
 
     def __len__(self):
         return self.length

@@ -1,14 +1,13 @@
 import time
 from multiprocessing import cpu_count
 
-import torch
 from torch import optim
 from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence
 from torch.utils.data import DataLoader
 
-from dataset.coco_dataset import CocoDataset
 from dataset.corpus import Corpus
+from dataset.evaluator_coco_dataset import EvaluatorCocoDataset
 from evaluator.evaluator import Evaluator
 from evaluator.evaluator_loss import EvaluatorLoss
 from file_path_manager import FilePathManager
@@ -22,7 +21,7 @@ if __name__ == '__main__':
     corpus = Corpus.load(FilePathManager.resolve("data/corpus.pkl"))
     evaluator = Evaluator.load(corpus).cuda()
     generator = ConditionalGenerator.load(corpus).cuda()
-    dataset = CocoDataset(corpus, evaluator=True)
+    dataset = EvaluatorCocoDataset(corpus)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=cpu_count())
     evaluator_criterion = EvaluatorLoss().cuda()
     generator_criterion = RLLoss().cuda()
@@ -45,18 +44,18 @@ if __name__ == '__main__':
             loss.backward()
             generator_optimizer.step()
             # evaluator
-            # evaluator.unfreeze()
-            # generator.freeze()
-            # temp = images.shape[0]
-            # generator_outputs = generator.sample_with_embedding(images)
-            # captions = torch.cat([captions, generator_outputs, other_captions])
-            # captions = pack_padded_sequence(captions, [18] * temp * 3, True)
-            # evaluator_optimizer.zero_grad()
-            # outs = evaluator(images, captions)
-            # captions, generator_captions, other_captions = outs[:temp], outs[temp:2 * temp], outs[2 * temp:]
-            # loss = evaluator_criterion(outs)
-            # loss.backward()
-            # evaluator_optimizer.step()
+            evaluator.unfreeze()
+            generator.freeze()
+            temp = images.shape[0]
+            captions = pack_padded_sequence(captions, [18] * temp, True)
+            other_captions = pack_padded_sequence(other_captions, [18] * temp, True)
+            generator_outputs = generator.sample_with_embedding(images)
+            evaluator_outputs = evaluator(images, captions)
+            generator_outputs = evaluator(images, generator_outputs)
+            other_outputs = evaluator(images, other_captions)
+            loss = evaluator_criterion(evaluator_outputs, generator_outputs, other_outputs)
+            loss.backward()
+            evaluator_optimizer.step()
             end = time.time()
             print(f"Batch Time {end - start}")
             start = end

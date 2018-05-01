@@ -20,8 +20,8 @@ class Evaluator(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def init_hidden(self, batch_size):
-        return Variable(torch.randn(1, batch_size, self.input_encoding_size)).cuda(), Variable(
-            torch.randn((1, batch_size, self.input_encoding_size))).cuda()
+        return Variable(torch.zeros(1, batch_size, self.input_encoding_size)).cuda(), Variable(
+            torch.zeros((1, batch_size, self.input_encoding_size))).cuda()
 
     def forward(self, image_features, embeddings):
         batch_size = image_features.size(0)

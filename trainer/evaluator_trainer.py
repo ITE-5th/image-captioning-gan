@@ -2,14 +2,13 @@ import os
 import time
 from multiprocessing import cpu_count
 
-import torch
 from torch import optim
 from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence
 from torch.utils.data import DataLoader
 
-from dataset.coco_dataset import CocoDataset
 from dataset.corpus import Corpus
+from dataset.evaluator_coco_dataset import EvaluatorCocoDataset
 from evaluator.evaluator import Evaluator
 from evaluator.evaluator_loss import EvaluatorLoss
 from file_path_manager import FilePathManager
@@ -22,7 +21,7 @@ if __name__ == '__main__':
     evaluator = Evaluator(corpus).cuda()
     generator = ConditionalGenerator.load(corpus).cuda()
     generator.freeze()
-    dataset = CocoDataset(corpus, evaluator=True)
+    dataset = EvaluatorCocoDataset(corpus)
     batch_size = 128
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=cpu_count())
     criterion = EvaluatorLoss().cuda()
@@ -37,14 +36,13 @@ if __name__ == '__main__':
             images, captions, other_captions = Variable(images).cuda(), Variable(captions).cuda(), Variable(
                 other_captions).cuda()
             temp = images.shape[0]
+            captions = pack_padded_sequence(captions, [18] * temp, True)
+            other_captions = pack_padded_sequence(other_captions, [18] * temp, True)
             generator_outputs = generator.sample_with_embedding(images)
-            captions = torch.cat([captions, generator_outputs, other_captions])
-            captions = pack_padded_sequence(captions, [18] * temp * 3, True)
-            optimizer.zero_grad()
-            # images = torch.cat([images, images, images])
-            outs = evaluator(images, captions)
-            captions, generator_captions, other_captions = outs[:temp], outs[temp:2 * temp], outs[2 * temp:]
-            loss = criterion(outs)
+            evaluator_outputs = evaluator(images, captions)
+            generator_outputs = evaluator(images, generator_outputs)
+            other_outputs = evaluator(images, other_captions)
+            loss = criterion(evaluator_outputs, generator_outputs, other_outputs)
             loss.backward()
             optimizer.step()
             end = time.time()

@@ -26,4 +26,4 @@ unzip ../data/annotations_trainval2017.zip -d ../data/
 mv ../data/annotations_trainval2017 ../data/annotations
 rm ../data/annotations_trainval2017.zip
 
-#python ../dataset/coco_dataset.py
+#python ../dataset/generator_coco_dataset.py

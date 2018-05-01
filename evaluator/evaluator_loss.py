@@ -20,5 +20,4 @@ class EvaluatorLoss(nn.Module):
             other_outputs)
         result = t1 + t2 + t3
         result = -result
-        result = result.mean()
-        return result
+        return result.mean()

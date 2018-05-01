@@ -1,3 +1,4 @@
+pretrainedmodels
 numpy
 cython
 gensim
