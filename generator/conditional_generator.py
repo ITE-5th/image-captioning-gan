@@ -2,6 +2,7 @@ import copy
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.distributions import Normal
 
@@ -45,7 +46,7 @@ class ConditionalGenerator(nn.Module):
     def init_hidden(self, image_features):
 
         # generate rand
-        rand = self.dist.sample_n(image_features.shape[0]).cuda()
+        rand = self.dist.sample((image_features.shape[0],)).cuda()
 
         # hidden of shape (num_layers * num_directions, batch, hidden_size)
         hidden = self.features_linear(torch.cat((image_features, rand), 1).unsqueeze(0))
@@ -64,7 +65,6 @@ class ConditionalGenerator(nn.Module):
     def reward_forward(self, image_features, evaluator, monte_carlo_count=16):
         batch_size = image_features.size(0)
         hidden = self.init_hidden(image_features)
-        net = copy.deepcopy(self)
         # embed the start symbol
         inputs = self.embed.word_embeddings([self.embed.START_SYMBOL] * batch_size).unsqueeze(1).cuda()
         rewards = torch.zeros(batch_size, self.max_sentence_length)
@@ -74,13 +74,14 @@ class ConditionalGenerator(nn.Module):
         for i in range(self.max_sentence_length):
             _, hidden = self.lstm(inputs, hidden)
             outputs = self.output_linear(hidden[0]).squeeze(0)
-            predicted = outputs.multinomial(1).view(batch_size, -1)
+            outputs = F.softmax(outputs, -1)
+            predicted = outputs.multinomial(1)
             prop = torch.gather(outputs, 1, predicted)
             props[:, i] = prop.view(-1)
             # embed the next inputs, unsqueeze is required cause of shape (batch_size, 1, embedding_size)
-            inputs = self.embed.word_embeddings_from_indices(predicted.cpu().data.numpy()).unsqueeze(1).cuda()
+            inputs = self.embed.word_embeddings_from_indices(predicted.view(-1).cpu().data.numpy()).unsqueeze(1).cuda()
             current_generated = torch.cat([current_generated, inputs], dim=1)
-            reward = self.rollout.reward(current_generated, hidden, monte_carlo_count, evaluator)
+            reward = self.rollout.reward(current_generated, image_features, hidden, monte_carlo_count, evaluator)
             rewards[:, i] = reward.view(-1)
         return rewards, props
 

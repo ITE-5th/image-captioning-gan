@@ -45,18 +45,18 @@ if __name__ == '__main__':
             loss.backward()
             generator_optimizer.step()
             # evaluator
-            evaluator.unfreeze()
-            generator.freeze()
-            temp = images.shape[0]
-            generator_outputs = generator.sample_with_embedding(images)
-            captions = torch.cat([captions, generator_outputs, other_captions])
-            captions = pack_padded_sequence(captions, [18] * temp * 3, True)
-            evaluator_optimizer.zero_grad()
-            outs = evaluator(images, captions)
-            captions, generator_captions, other_captions = outs[:temp], outs[temp:2 * temp], outs[2 * temp:]
-            loss = evaluator_criterion(outs)
-            loss.backward()
-            evaluator_optimizer.step()
+            # evaluator.unfreeze()
+            # generator.freeze()
+            # temp = images.shape[0]
+            # generator_outputs = generator.sample_with_embedding(images)
+            # captions = torch.cat([captions, generator_outputs, other_captions])
+            # captions = pack_padded_sequence(captions, [18] * temp * 3, True)
+            # evaluator_optimizer.zero_grad()
+            # outs = evaluator(images, captions)
+            # captions, generator_captions, other_captions = outs[:temp], outs[temp:2 * temp], outs[2 * temp:]
+            # loss = evaluator_criterion(outs)
+            # loss.backward()
+            # evaluator_optimizer.step()
             end = time.time()
             print(f"Batch Time {end - start}")
             start = end
