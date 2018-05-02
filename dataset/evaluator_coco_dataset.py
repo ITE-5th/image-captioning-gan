@@ -25,8 +25,8 @@ class EvaluatorCocoDataset(Dataset):
         temp = index // 5
         image = self.images[temp]
         image = image.view(-1)
-        item = self.captions[temp]
-        caption = item[1][index % 5]
+        item = self.get_captions(temp)
+        caption = item[index % 5]
         caption = self.corpus.embed_sentence(caption, one_hot=False)
         s = set(range(self.length // 5))
         s.remove(temp)
@@ -34,7 +34,7 @@ class EvaluatorCocoDataset(Dataset):
         other_index = random.choice(s)
         other_caption = self.get_captions(other_index)
         other_index = random.choice(range(5))
-        other_caption = other_caption[1][other_index]
+        other_caption = other_caption[other_index]
         other_caption = self.corpus.embed_sentence(other_caption, one_hot=False)
         return image, caption, other_caption
 
