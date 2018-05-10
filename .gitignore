@@ -3,3 +3,4 @@ data/*
 !data/corpus.pkl
 __pycache__
 models
+!/data/embedded_words.pkl
