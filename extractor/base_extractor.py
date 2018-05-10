@@ -8,3 +8,6 @@ class BaseExtractor(metaclass=ABCMeta):
     @abstractmethod
     def extract(self, image):
         raise NotImplementedError()
+
+    def __call__(self, image):
+        return self.forward(image)
