@@ -30,23 +30,23 @@ if __name__ == '__main__':
     print(f"number of batches = {len(dataset) // batch_size}")
     print("Begin Training")
     for epoch in range(epochs):
-        start = time.time()
+        # generator
+        generator.unfreeze()
+        evaluator.freeze()
         for i, (images, captions, other_captions) in enumerate(dataloader, 0):
             print(f"Batch = {i + 1}")
             images, captions, other_captions = Variable(images).cuda(), Variable(captions).cuda(), Variable(
                 other_captions).cuda()
             temp = images.shape[0]
-            # generator
-            generator.unfreeze()
-            evaluator.freeze()
             rewards, props = generator.reward_forward(images, evaluator, monte_carlo_count=monte_carlo_count)
             generator_optimizer.zero_grad()
             loss = generator_criterion(rewards, props)
             loss.backward()
             generator_optimizer.step()
-            # evaluator
-            evaluator.unfreeze()
-            generator.freeze()
+        # evaluator
+        evaluator.unfreeze()
+        generator.freeze()
+        for i, (images, captions, other_captions) in enumerate(dataloader, 0):       
             captions = pack_padded_sequence(captions, [18] * temp, True)
             other_captions = pack_padded_sequence(other_captions, [18] * temp, True)
             generator_outputs = generator.sample_with_embedding(images)
@@ -56,9 +56,6 @@ if __name__ == '__main__':
             loss = evaluator_criterion(evaluator_outputs, generator_outputs, other_outputs)
             loss.backward()
             evaluator_optimizer.step()
-            end = time.time()
-            print(f"Batch Time {end - start}")
-            start = end
         print(f"Epoch = {epoch + 1}")
         generator.save()
         evaluator.save()
